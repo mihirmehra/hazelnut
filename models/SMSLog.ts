@@ -4,7 +4,7 @@ export interface ISMSLog extends Document {
   _id: mongoose.Types.ObjectId
   phone_number: string
   message: string
-  sms_type: "ticket_created" | "ticket_approved" | "ticket_rejected" | "user_created" | "general"
+  sms_type: "ticket_created" | "ticket_approved" | "ticket_rejected" | "user_created" | "invoice_uploaded" | "general"
   related_id?: mongoose.Types.ObjectId
   status: "pending" | "sent" | "failed" | "mock_sent" | "delivered"
   provider_response?: Record<string, any>
@@ -24,7 +24,7 @@ const SMSLogSchema = new Schema<ISMSLog>(
     },
     sms_type: {
       type: String,
-      enum: ["ticket_created", "ticket_approved", "ticket_rejected", "user_created", "general"],
+      enum: ["ticket_created", "ticket_approved", "ticket_rejected", "user_created", "invoice_uploaded", "general"],
       required: true,
     },
     related_id: {
