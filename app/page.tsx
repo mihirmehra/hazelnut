@@ -12,7 +12,7 @@ export default function Home() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
               <span className="text-lg font-bold text-primary-foreground">H</span>
             </div>
-            <span className="text-xl font-semibold tracking-tight">Hazel</span>
+            <span className="text-xl font-semibold tracking-tight">Hazelnucyborg</span>
           </div>
           <div className="flex items-center gap-3">
             <Button asChild variant="ghost" size="sm">
@@ -132,7 +132,7 @@ export default function Home() {
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
                 <span className="text-sm font-bold text-primary-foreground">H</span>
               </div>
-              <span className="font-semibold">Hazel CRM</span>
+              <span className="font-semibold">Hazelnucyborg CRM</span>
             </div>
             <p className="text-sm text-muted-foreground">
               Built with care for modern businesses.

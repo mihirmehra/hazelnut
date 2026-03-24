@@ -18,12 +18,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Hazel CRM Platform",
-    template: "%s | Hazel CRM",
+    default: "Hazelnucyborg CRM Platform",
+    template: "%s | Hazelnucyborg CRM",
   },
-  description: "Enterprise CRM platform for managing customer support, products, and teams efficiently",
-  keywords: ["CRM", "customer support", "ticket management", "product catalog", "team management"],
-  authors: [{ name: "Hazel" }],
+  description: "Enterprise CRM platform for managing customer support, products, invoices, and teams efficiently",
+  keywords: ["CRM", "customer support", "ticket management", "product catalog", "team management", "invoice management"],
+  authors: [{ name: "Hazelnucyborg" }],
   icons: {
     icon: [
       {
