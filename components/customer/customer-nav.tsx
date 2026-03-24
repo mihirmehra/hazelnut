@@ -60,7 +60,7 @@ export function CustomerNav({ customer, onLogout }: { customer: any; onLogout: (
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <span className="text-sm font-bold text-primary-foreground">H</span>
             </div>
-            <span className="text-lg font-semibold tracking-tight">Hazel</span>
+            <span className="text-lg font-semibold tracking-tight">Hazelnucyborg</span>
           </div>
           <NotificationsBell userType="customer" />
         </div>
