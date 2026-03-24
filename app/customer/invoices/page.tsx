@@ -22,7 +22,54 @@ import {
 import { toast } from "sonner"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { FileText, Plus, Calendar, Download, Clock, CheckCircle2, XCircle, AlertCircle, HourglassIcon } from "lucide-react"
-import { format, differenceInDays, differenceInHours } from "date-fns"
+import { format, differenceInSeconds } from "date-fns"
+
+// Countdown Timer Component
+function CountdownTimer({ targetDate }: { targetDate: string }) {
+  const [timeLeft, setTimeLeft] = useState("")
+  const [isExpired, setIsExpired] = useState(false)
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date()
+      const target = new Date(targetDate)
+      const totalSeconds = differenceInSeconds(target, now)
+
+      if (totalSeconds <= 0) {
+        setIsExpired(true)
+        setTimeLeft("Expired")
+        return
+      }
+
+      const days = Math.floor(totalSeconds / (24 * 60 * 60))
+      const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60))
+      const minutes = Math.floor((totalSeconds % (60 * 60)) / 60)
+      const seconds = totalSeconds % 60
+
+      if (days > 0) {
+        setTimeLeft(`${days}d ${hours}h ${minutes}m`)
+      } else if (hours > 0) {
+        setTimeLeft(`${hours}h ${minutes}m ${seconds}s`)
+      } else if (minutes > 0) {
+        setTimeLeft(`${minutes}m ${seconds}s`)
+      } else {
+        setTimeLeft(`${seconds}s`)
+      }
+    }
+
+    calculateTimeLeft()
+    const interval = setInterval(calculateTimeLeft, 1000)
+
+    return () => clearInterval(interval)
+  }, [targetDate])
+
+  return (
+    <div className={`flex items-center gap-1.5 text-xs ${isExpired ? 'text-destructive' : 'text-muted-foreground'}`}>
+      <Clock className="h-3 w-3" />
+      <span className="font-mono tabular-nums">{timeLeft}</span>
+    </div>
+  )
+}
 
 interface InvoiceRequest {
   id: string
@@ -39,12 +86,22 @@ interface InvoiceRequest {
 
 interface Invoice {
   id: string
-  request_id: string
+  invoice_number: string
+  customer_id: string
+  customer_name: string
+  request_number: string
   file_url: string
   file_name: string
-  available_until: string
-  notes?: string
-  uploaded_at: string
+  file_size: number
+  date_range_start: string
+  date_range_end: string
+  visibility_start: string
+  visibility_end: string
+  is_active: boolean
+  download_count: number
+  uploaded_by_name: string
+  created_at: string
+  invoice_request_id?: string
 }
 
 export default function CustomerInvoicesPage() {
@@ -185,39 +242,28 @@ export default function CustomerInvoicesPage() {
     }
   }
 
-  const getInvoiceForRequest = (requestId: string) => {
-    return invoices.find((inv) => inv.request_id === requestId)
+  const getInvoiceForRequest = (requestNumber: string) => {
+    return invoices.find((inv) => inv.request_number === requestNumber)
   }
 
   const isInvoiceAvailable = (invoice: Invoice) => {
-    return new Date(invoice.available_until) > new Date()
-  }
-
-  const getTimeRemaining = (availableUntil: string) => {
     const now = new Date()
-    const until = new Date(availableUntil)
-    const days = differenceInDays(until, now)
-    const hours = differenceInHours(until, now) % 24
-
-    if (days > 0) {
-      return `${days}d ${hours}h remaining`
-    } else if (hours > 0) {
-      return `${hours}h remaining`
-    }
-    return "Expired"
+    const start = new Date(invoice.visibility_start)
+    const end = new Date(invoice.visibility_end)
+    return invoice.is_active && now >= start && now <= end
   }
 
   const getStatusBadge = (status: string) => {
-    const config: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string; icon: React.ReactNode }> = {
+    const config: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string; icon: React.ReactNode; className?: string }> = {
       pending_approval: { variant: "secondary", label: "Pending Approval", icon: <Clock className="h-3 w-3" /> },
       approved: { variant: "default", label: "Approved", icon: <CheckCircle2 className="h-3 w-3" /> },
       rejected: { variant: "destructive", label: "Rejected", icon: <XCircle className="h-3 w-3" /> },
-      uploaded: { variant: "outline", label: "Invoice Ready", icon: <FileText className="h-3 w-3" /> },
+      uploaded: { variant: "default", label: "Invoice Ready", icon: <Download className="h-3 w-3" />, className: "bg-green-600 hover:bg-green-700" },
       expired: { variant: "destructive", label: "Expired", icon: <AlertCircle className="h-3 w-3" /> },
     }
-    const { variant, label, icon } = config[status] || { variant: "secondary", label: status, icon: null }
+    const { variant, label, icon, className } = config[status] || { variant: "secondary", label: status, icon: null }
     return (
-      <Badge variant={variant} className="gap-1">
+      <Badge variant={variant} className={`gap-1 ${className || ""}`}>
         {icon}
         {label}
       </Badge>
@@ -396,8 +442,9 @@ export default function CustomerInvoicesPage() {
                     </TableHeader>
                     <TableBody>
                       {requests.map((request) => {
-                        const invoice = getInvoiceForRequest(request.id)
+                        const invoice = getInvoiceForRequest(request.request_number)
                         const available = invoice && isInvoiceAvailable(invoice)
+                        const isInvoiceReady = request.status === "uploaded"
 
                         return (
                           <TableRow key={request.id}>
@@ -414,35 +461,41 @@ export default function CustomerInvoicesPage() {
                               {format(new Date(request.created_at), "MMM d, yyyy")}
                             </TableCell>
                             <TableCell className="text-right">
-                              {invoice && available ? (
-                                <div className="flex items-center justify-end gap-2">
-                                  <span className="text-xs text-muted-foreground">
-                                    {getTimeRemaining(invoice.available_until)}
-                                  </span>
-                                  <Button size="sm" asChild>
+                              {isInvoiceReady && invoice && available ? (
+                                <div className="flex flex-col items-end gap-2">
+                                  <CountdownTimer targetDate={invoice.visibility_end} />
+                                  <Button size="sm" className="bg-green-600 hover:bg-green-700" asChild>
                                     <a
                                       href={invoice.file_url}
                                       target="_blank"
                                       rel="noopener noreferrer"
+                                      download={invoice.file_name}
                                     >
                                       <Download className="h-4 w-4 mr-1" />
-                                      Download
+                                      Download Invoice
                                     </a>
                                   </Button>
                                 </div>
-                              ) : invoice && !available ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => setIsDialogOpen(true)}
-                                >
-                                  <Plus className="h-4 w-4 mr-1" />
-                                  Request Again
-                                </Button>
+                              ) : isInvoiceReady && invoice && !available ? (
+                                <div className="flex flex-col items-end gap-1">
+                                  <span className="text-xs text-destructive">Download expired</span>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setIsDialogOpen(true)}
+                                  >
+                                    <Plus className="h-4 w-4 mr-1" />
+                                    Request Again
+                                  </Button>
+                                </div>
                               ) : request.status === "rejected" ? (
                                 <span className="text-sm text-destructive">
                                   {request.rejection_reason || "Rejected"}
                                 </span>
+                              ) : request.status === "approved" ? (
+                                <span className="text-sm text-muted-foreground">Processing...</span>
+                              ) : request.status === "pending_approval" ? (
+                                <span className="text-sm text-muted-foreground">Awaiting approval</span>
                               ) : (
                                 <span className="text-sm text-muted-foreground">-</span>
                               )}
