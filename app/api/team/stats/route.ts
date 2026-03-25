@@ -24,7 +24,7 @@ export async function GET() {
       recentCustomers,
       recentActivity,
     ] = await Promise.all([
-      Customer.countDocuments({ isActive: true }),
+      Customer.countDocuments({ is_active: true }),
       Ticket.countDocuments({ status: "open" }),
       Ticket.countDocuments({ status: "in_progress" }),
       Ticket.countDocuments({ status: "closed" }),
@@ -37,7 +37,7 @@ export async function GET() {
         .lean(),
       // Recent customers with ticket count
       Customer.aggregate([
-        { $match: { isActive: true } },
+        { $match: { is_active: true } },
         {
           $lookup: {
             from: "tickets",
