@@ -75,7 +75,7 @@ export function TicketsList({ userRole }: TicketsListProps) {
   const [dateTo, setDateTo] = useState<Date | undefined>()
 
   // Get unique customers
-  const uniqueCustomers = Array.from(new Set(tickets.filter(t => t.customer_name).map(t => t.customer_name)))
+  const uniqueCustomers = Array.from(new Set(tickets.filter(t => t.company_name || t.customer_name).map(t => t.company_name || t.customer_name)))
 
   useEffect(() => {
     fetchTickets()
@@ -96,7 +96,7 @@ export function TicketsList({ userRole }: TicketsListProps) {
       filtered = filtered.filter((ticket) =>
         ticket.title?.toLowerCase().includes(query) ||
         ticket.ticket_number?.toLowerCase().includes(query) ||
-        ticket.customer_name?.toLowerCase().includes(query) ||
+        (ticket.company_name || ticket.customer_name)?.toLowerCase().includes(query) ||
         ticket.description?.toLowerCase().includes(query)
       )
     }
@@ -113,7 +113,7 @@ export function TicketsList({ userRole }: TicketsListProps) {
 
     // Customer filter
     if (filterCustomer !== "all") {
-      filtered = filtered.filter(t => t.customer_name === filterCustomer)
+      filtered = filtered.filter(t => (t.company_name || t.customer_name) === filterCustomer)
     }
 
     // Date filters
@@ -361,7 +361,7 @@ export function TicketsList({ userRole }: TicketsListProps) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm">{ticket.customer_name || "N/A"}</span>
+                      <span className="text-sm">{ticket.company_name || ticket.customer_name || "N/A"}</span>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={cn("gap-1.5", status.className)}>
