@@ -8,21 +8,21 @@ export async function GET() {
     await connectDB()
     
     const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get("session")
+    const teamSessionCookie = cookieStore.get("team-session")
 
-    if (!sessionCookie?.value) {
+    if (!teamSessionCookie?.value) {
       return Response.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     let session
     try {
-      session = JSON.parse(sessionCookie.value)
+      session = JSON.parse(teamSessionCookie.value)
     } catch {
       return Response.json({ error: "Invalid session" }, { status: 401 })
     }
 
-    // Check if user is team and has super_admin role
-    if (session.type !== "team" || session.session?.role !== "super_admin") {
+    // Check if user has super_admin role (team-session stores role directly)
+    if (session.role !== "super_admin") {
       return Response.json({ error: "Forbidden: Only super admins can access reports" }, { status: 403 })
     }
 
@@ -43,6 +43,7 @@ export async function GET() {
           totalTickets: { $sum: 1 },
           openTickets: { $sum: { $cond: [{ $eq: ["$status", "open"] }, 1, 0] } },
           inProgressTickets: { $sum: { $cond: [{ $eq: ["$status", "in_progress"] }, 1, 0] } },
+          waitingForResponseTickets: { $sum: { $cond: [{ $eq: ["$status", "waiting_for_response"] }, 1, 0] } },
           resolvedTickets: { $sum: { $cond: [{ $eq: ["$status", "resolved"] }, 1, 0] } },
           closedTickets: { $sum: { $cond: [{ $eq: ["$status", "closed"] }, 1, 0] } },
         },
@@ -123,6 +124,7 @@ export async function GET() {
         totalTickets: 0,
         openTickets: 0,
         inProgressTickets: 0,
+        waitingForResponseTickets: 0,
         resolvedTickets: 0,
         closedTickets: 0,
       }
@@ -146,6 +148,7 @@ export async function GET() {
         total_tickets: tickets.totalTickets,
         open_tickets: tickets.openTickets,
         in_progress_tickets: tickets.inProgressTickets,
+        waiting_for_response_tickets: tickets.waitingForResponseTickets,
         resolved_tickets: tickets.resolvedTickets,
         closed_tickets: tickets.closedTickets,
         total_clients: clients.totalClients,
@@ -192,6 +195,7 @@ export async function GET() {
           closed_count: tickets.filter((t: any) => t.status === "closed").length,
           in_progress_count: tickets.filter((t: any) => t.status === "in_progress").length,
           open_count: tickets.filter((t: any) => t.status === "open").length,
+          waiting_count: tickets.filter((t: any) => t.status === "waiting_for_response").length,
           excel_files_count: excelCount,
           last_message_time: lastMessage?.created_at || null,
         }
@@ -207,6 +211,7 @@ export async function GET() {
     const totalClosedTickets = agentMetrics.reduce((sum, agent: any) => sum + (agent.closed_tickets || 0), 0)
     const totalOpenTickets = agentMetrics.reduce((sum, agent: any) => sum + (agent.open_tickets || 0), 0)
     const totalInProgressTickets = agentMetrics.reduce((sum, agent: any) => sum + (agent.in_progress_tickets || 0), 0)
+    const totalWaitingForResponseTickets = agentMetrics.reduce((sum, agent: any) => sum + (agent.waiting_for_response_tickets || 0), 0)
     const avgResponseTimeAcrossAgents =
       agentMetrics.reduce((sum, agent: any) => sum + (agent.avg_response_time_hours || 0), 0) /
       Math.max(agentMetrics.length, 1)
@@ -223,6 +228,7 @@ export async function GET() {
         totalClosedTickets,
         totalOpenTickets,
         totalInProgressTickets,
+        totalWaitingForResponseTickets,
         totalClients: uniqueCustomerIds.length,
         avgResponseTime: Number(avgResponseTimeAcrossAgents.toFixed(2)),
       },
